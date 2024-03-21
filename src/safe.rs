@@ -237,15 +237,6 @@ impl<T: Transactionable> SafeTransaction<T> {
         })
     }
 
-    pub fn sort_and_join_sigs(sigs: &Vec<(Address, String)>) -> String {
-        let mut cloned = sigs.clone();
-        cloned.sort_by(|a, b| a.0.cmp(&b.0));
-        cloned
-            .into_iter()
-            .map(|(_, sig)| sig.replace("0x", ""))
-            .join("")
-    }
-
     pub async fn sign_safe_tx<S: 'static + ethers::signers::Signer>(
         self,
         signer: &S,
@@ -258,6 +249,9 @@ impl<T: Transactionable> SafeTransaction<T> {
         })
     }
 
+    /// See [sort_and_join_sigs] for more information about creating the signatures for the conract
+    /// 
+    /// This functions requires the signature being encoded in the way that the safe expects
     pub fn contract_call<M: Middleware>(
         self,
         signatures: String,
@@ -292,6 +286,15 @@ impl<T: Transactionable> SafeTransaction<T> {
 
         Ok(call)
     }
+}
+
+pub fn sort_and_join_sigs(sigs: &Vec<(Address, String)>) -> String {
+    let mut cloned = sigs.clone();
+    cloned.sort_by(|a, b| a.0.cmp(&b.0));
+    cloned
+        .into_iter()
+        .map(|(_, sig)| sig.replace("0x", ""))
+        .join("")
 }
 
 #[cfg(test)]
