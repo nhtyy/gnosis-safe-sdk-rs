@@ -65,9 +65,9 @@ impl<T: Transactionable> TryFrom<SignedSafePayload<T>> for ProposeRequest {
         let inner = payload.tx;
 
         Ok(Self {
-            to: inner.to().into(),
+            to: inner.to().clone().into(),
             value: inner.value().as_u128(),
-            data: inner.calldata().map(Into::into).unwrap_or_default(),
+            data: inner.calldata().map(|buf| Bytes::from(buf.to_vec())).unwrap_or_default(),
             operation: payload.operation,
             safe_tx_gas: payload.safe_tx_gas.as_u128(),
             base_gas: payload.base_gas.as_u128(),

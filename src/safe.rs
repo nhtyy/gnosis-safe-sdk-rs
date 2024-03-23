@@ -5,7 +5,7 @@ use crate::constants::{DOMAIN_TYPE_HASH, PAYLOAD_TYPE_HASH};
 use ethers::prelude::abigen;
 use ethers::prelude::builders::ContractCall;
 use ethers::providers::Middleware;
-use ethers::types::Signature;
+use ethers::types::{Bytes, Signature};
 use ethers::types::{Address, U256};
 use ethers::utils::keccak256;
 use ethers::{
@@ -94,13 +94,14 @@ impl<T: Transactionable> Eip712 for SafeTransaction<T> {
     fn struct_hash(&self) -> Result<[u8; 32], Self::Error> {
         Ok(keccak256(abi::encode(&[
             Token::FixedBytes(PAYLOAD_TYPE_HASH.clone()),
-            Token::Address(self.tx.to()),
-            Token::Uint(self.tx.value()),
+            Token::Address(self.tx.to().clone()),
+            Token::Uint(self.tx.value().clone()),
             Token::FixedBytes(
                 keccak256(
                     self.tx
                         .calldata()
-                        .map_err(|_| Eip712Error::FailedToEncodeStruct)?,
+                        .map(|buf| buf.to_vec())
+                        .unwrap_or_default()
                 )
                 .to_vec(),
             ), // see EIP-712, bytes are hashed
@@ -256,9 +257,9 @@ impl<T: Transactionable> SafeTransaction<T> {
         let instance = GnosisSafe::new(safe_address, client.clone());
 
         let call: ethers::contract::builders::ContractCall<_, _> = instance.exec_transaction(
-            tx.to(),
-            tx.value(),
-            tx.calldata()?.into(),
+            tx.to().clone(),
+            tx.value().clone(),
+            tx.calldata().map(|buf| Bytes::from(buf.to_vec())).unwrap_or_default(),
             operation as u8,
             safe_tx_gas,
             base_gas,
@@ -294,16 +295,16 @@ fn test_hashing() {
     }
 
     impl Transactionable for Test {
-        fn calldata(&self) -> anyhow::Result<Vec<u8>> {
-            Ok(H256::zero().as_bytes().to_vec())
+        fn calldata(&self) -> Option<&[u8]> {
+            Some(&[0u8; 32])
         }
 
-        fn to(&self) -> Address {
-            self.to
+        fn to(&self) -> &Address {
+            &self.to
         }
 
-        fn value(&self) -> U256 {
-            self.value
+        fn value(&self) -> &U256 {
+            &self.value
         }
     }
 

@@ -34,7 +34,7 @@ impl<T: Transactionable> Bundle<T> {
         let (calldatas, value): (Vec<Vec<u8>>, Vec<U256>) = transactions
             .iter()
             .map(|(tx, op)| {
-                let encoded_data = tx.calldata().unwrap_or(vec![]);
+                let encoded_data = tx.calldata().unwrap_or(&[]);
 
                 let multisend_encoded_calldata = [
                     // 1 byte
@@ -74,16 +74,16 @@ fn abi_encode_uint(num: &U256) -> Vec<u8> {
 }
 
 impl<T: Transactionable> Transactionable for Bundle<T> {
-    fn calldata(&self) -> anyhow::Result<Vec<u8>> {
-        Ok(self.calldata.clone())
+    fn calldata(&self) -> Option<&[u8]> {
+        Some(&self.calldata)
     }
 
-    fn to(&self) -> ethers::types::Address {
-        *crate::constants::MULTISEND_ADDRESS
+    fn to(&self) -> &ethers::types::Address {
+        &*crate::constants::MULTISEND_ADDRESS
     }
 
-    fn value(&self) -> U256 {
-        self.value
+    fn value(&self) -> &U256 {
+        &self.value
     }
 }
 

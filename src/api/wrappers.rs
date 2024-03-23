@@ -184,6 +184,14 @@ where
     s.serialize_str(&format!("0x{}", hex::encode(hash)))
 }
 
+impl std::ops::Deref for Hash {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl From<[u8; 32]> for Hash {
     fn from(hash: [u8; 32]) -> Self {
         Self(hash)

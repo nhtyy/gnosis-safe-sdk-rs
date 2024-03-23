@@ -1,4 +1,5 @@
 use super::types::{ProposeRequest, SafeInfoResponse};
+use super::wrappers::ChecksumAddress;
 use crate::encoding::bytes_to_hex_string;
 use crate::safe::SafeTransaction;
 use crate::safe::{SafeTransactionBuilder, SignedSafePayload};
@@ -34,20 +35,20 @@ lazy_static! {
 }
 
 pub struct SafeClient {
-    safe_address: Address,
+    safe_address: ChecksumAddress,
     client: reqwest::Client,
 }
 
 impl SafeClient {
     fn new(safe_address: Address) -> Self {
         SafeClient {
-            safe_address,
+            safe_address: safe_address.into(),
             client: MAINNET_CLIENT.clone(),
         }
     }
 
     fn safe_tx_builder<T: Transactionable>(&self, tx: T) -> SafeTransactionBuilder<T> {
-        SafeTransactionBuilder::new(tx, self.chain_id(), self.safe_address)
+        SafeTransactionBuilder::new(tx, self.chain_id(), self.safe_address.into())
     }
 
     const fn chain_id(&self) -> u64 {
@@ -57,12 +58,11 @@ impl SafeClient {
 
 impl SafeClient {
     pub async fn safe_info(&self) -> anyhow::Result<SafeInfoResponse> {
-        let checksummed_address = ethers::core::utils::to_checksum(&self.safe_address, None);
-        debug!("getting safe {}", checksummed_address);
+        debug!("getting safe {}", self.safe_address);
 
         json_get!(
             self.client,
-            BASE_URL.join(&format!("/v1/safes/{}/", checksummed_address))?,
+            BASE_URL.join(&format!("/v1/safes/{}/", self.safe_address))?,
             SafeInfoResponse
         )
     }
