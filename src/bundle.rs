@@ -1,5 +1,5 @@
+use crate::api::types::Operation;
 use crate::transaction::Transactionable;
-use crate::types::Operation;
 use anyhow::Ok;
 use ethers::abi::Uint;
 use ethers::types::U256;

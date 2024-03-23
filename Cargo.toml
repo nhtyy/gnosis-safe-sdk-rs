@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ethers = {version = "1.0.2", features=["ledger"]}
+ethers = { version = "^2", features=["ledger"] }
 hex = "0.4.3"
-safe-client-gateway = { git = "https://github.com/Alongside-Finance/safe-client-gateway.git", branch="patched"}
 anyhow = "1.0.50"
 lazy_static = "1.4.0"
 serde = {version = "1.0.130", features = ["derive"]}

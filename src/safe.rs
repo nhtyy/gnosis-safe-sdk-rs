@@ -1,4 +1,5 @@
 use super::transaction::Transactionable;
+use crate::api::types::Operation;
 use crate::bundle::Bundle;
 use crate::constants::{DOMAIN_TYPE_HASH, PAYLOAD_TYPE_HASH};
 use ethers::prelude::abigen;
@@ -13,10 +14,6 @@ use ethers::{
     types::transaction::eip712::{EIP712Domain, Eip712, Eip712Error},
 };
 use itertools::Itertools;
-use safe_client_gateway::common::models::data_decoded::Operation;
-use safe_client_gateway::routes::transactions::models::details::{
-    DetailedExecutionInfo, TransactionDetails,
-};
 use tracing::info;
 
 abigen!(GnosisSafe, "abi/gnosis_safe.json",);
@@ -44,7 +41,7 @@ pub struct SafeTransactionBuilder<T: Transactionable> {
     pub operation: Option<Operation>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct SafeTransaction<T: Transactionable> {
     pub tx: T,
     pub safe_address: Address,
@@ -58,12 +55,12 @@ pub struct SafeTransaction<T: Transactionable> {
     pub operation: Operation,
 }
 
-pub fn attempt_extract_nonce(tx: &TransactionDetails) -> Option<u64> {
-    match tx.detailed_execution_info.clone() {
-        Some(DetailedExecutionInfo::Multisig(info)) => Some(info.nonce),
-        _ => None,
-    }
-}
+// pub fn attempt_extract_nonce(tx: &TransactionDetails) -> Option<u64> {
+//     match tx.detailed_execution_info.clone() {
+//         Some(DetailedExecutionInfo::Multisig(info)) => Some(info.nonce),
+//         _ => None,
+//     }
+// }
 
 impl<T: Transactionable> Eip712 for SafeTransaction<T> {
     type Error = Eip712Error;
@@ -123,10 +120,6 @@ impl<T: Transactionable> Eip712 for SafeTransaction<T> {
 
 impl<T: Transactionable> SafeTransactionBuilder<T> {
     pub async fn build(self) -> anyhow::Result<SafeTransaction<T>> {
-        let nonce = match self.nonce {
-            Some(nonce) => nonce,
-            None => self.next_nonce().await?,
-        };
         Ok(SafeTransaction {
             tx: self.tx,
             chain_id: self.chain_id,
@@ -136,7 +129,7 @@ impl<T: Transactionable> SafeTransactionBuilder<T> {
             gas_price: self.gas_price.unwrap_or(U256::zero()),
             gas_token: self.gas_token.unwrap_or(Address::zero()),
             refund_receiver: self.refund_receiver.unwrap_or(Address::zero()),
-            nonce: nonce,
+            nonce: self.nonce.ok_or(anyhow::anyhow!("No Nonce on builder"))?,
             operation: self.operation.unwrap_or(Operation::CALL),
         })
     }
@@ -163,15 +156,6 @@ impl<T: Transactionable> SafeTransactionBuilder<T> {
         safe_address: Address,
     ) -> SafeTransactionBuilder<Bundle<T>> {
         SafeTransactionBuilder::new(bundle, chain_id, safe_address).operation(Operation::DELEGATE)
-    }
-
-    pub async fn next_nonce(&self) -> anyhow::Result<U256> {
-        Ok(U256::from(
-            crate::api::safes(self.chain_id, self.safe_address)
-                .await?
-                .safe_config
-                .nonce,
-        ))
     }
 
     pub fn safe_tx_gas(mut self, safe_tx_gas: U256) -> Self {
@@ -250,7 +234,7 @@ impl<T: Transactionable> SafeTransaction<T> {
     }
 
     /// See [sort_and_join_sigs] for more information about creating the signatures for the conract
-    /// 
+    ///
     /// This functions requires the signature being encoded in the way that the safe expects
     pub fn contract_call<M: Middleware>(
         self,
@@ -346,7 +330,7 @@ fn test_hashing() {
             .parse()
             .unwrap(),
         nonce: U256::zero(),
-        operation: safe_client_gateway::common::models::data_decoded::Operation::CALL,
+        operation: crate::api::types::Operation::CALL,
     };
 
     let hash = payload.encode_eip712().unwrap();
