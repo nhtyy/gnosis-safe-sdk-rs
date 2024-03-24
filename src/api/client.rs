@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicU32, AtomicU64};
 use tracing::debug;
 
 /// Mainnet only
-const _BASE_URL: &str = "https://safe-transaction-mainnet.safe.global/api";
+const _BASE_URL: &str = "https://safe-transaction-mainnet.safe.global/api/";
 
 lazy_static! {
     static ref MAINNET_CLIENT: reqwest::Client = reqwest::ClientBuilder::new()
@@ -77,7 +77,7 @@ impl SafeClient {
 
         json_get!(
             self.client,
-            BASE_URL.join(&format!("/v1/safes/{}/", self.safe_address))?,
+            BASE_URL.join(&format!("v1/safes/{}/", self.safe_address))?,
             SafeInfoResponse
         )
     }
@@ -88,7 +88,7 @@ impl SafeClient {
         json_post!(
             self.client,
             BASE_URL.join(&format!(
-                "/v1/safes/{}/multisig-transactions/",
+                "v1/safes/{}/multisig-transactions/",
                 self.safe_address
             ))?,
             tx
