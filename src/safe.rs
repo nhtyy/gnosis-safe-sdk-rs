@@ -120,7 +120,7 @@ impl<T: Transactionable> Eip712 for SafeTransaction<T> {
 }
 
 impl<T: Transactionable> SafeTransactionBuilder<T> {
-    pub async fn build(self) -> anyhow::Result<SafeTransaction<T>> {
+    pub fn build(self) -> anyhow::Result<SafeTransaction<T>> {
         Ok(SafeTransaction {
             tx: self.tx,
             chain_id: self.chain_id,

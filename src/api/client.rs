@@ -15,6 +15,7 @@ use reqwest::header::{HeaderName, HeaderValue};
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU32, AtomicU64};
 use tracing::debug;
 
 /// Mainnet only
@@ -37,18 +38,32 @@ lazy_static! {
 pub struct SafeClient {
     safe_address: ChecksumAddress,
     client: reqwest::Client,
+    nonce: AtomicU64,
 }
 
 impl SafeClient {
-    pub fn new(safe_address: Address) -> Self {
-        SafeClient {
+    pub async fn new(safe_address: Address) -> anyhow::Result<Self> {
+        let this = SafeClient {
             safe_address: safe_address.into(),
             client: MAINNET_CLIENT.clone(),
-        }
+            nonce: AtomicU64::new(0),
+        };
+
+        let nonce = this.safe_info().await?.nonce;
+
+        this.nonce
+            .store(nonce, std::sync::atomic::Ordering::Relaxed);
+
+        Ok(this)
     }
 
+    /// Increments the nonce and returns a builder with the nonce set
     pub fn safe_tx_builder<T: Transactionable>(&self, tx: T) -> SafeTransactionBuilder<T> {
-        SafeTransactionBuilder::new(tx, self.chain_id(), self.safe_address.into())
+        SafeTransactionBuilder::new(tx, self.chain_id(), self.safe_address.into()).nonce(
+            self.nonce
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                .into(),
+        )
     }
 
     const fn chain_id(&self) -> u64 {
