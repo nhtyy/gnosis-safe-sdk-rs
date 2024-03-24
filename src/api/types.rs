@@ -45,6 +45,7 @@ pub struct ProposeRequest {
     pub gas_token: ChecksumAddress,
     pub safe_tx_gas: u128,
     pub base_gas: u128,
+    pub gas_price: u128,
     pub nonce: u128,
     pub contract_transaction_hash: Hash,
     pub sender: ChecksumAddress,
@@ -77,6 +78,7 @@ impl<T: Transactionable> TryFrom<SignedSafePayload<T>> for ProposeRequest {
             sender: sender.into(),
             signature: signature.to_string(),
             safe: payload.safe_address.into(),
+            gas_price: payload.gas_price.as_u128(),
         })
     }
 }
