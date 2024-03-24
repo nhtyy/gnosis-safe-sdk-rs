@@ -40,14 +40,14 @@ pub struct SafeClient {
 }
 
 impl SafeClient {
-    fn new(safe_address: Address) -> Self {
+    pub fn new(safe_address: Address) -> Self {
         SafeClient {
             safe_address: safe_address.into(),
             client: MAINNET_CLIENT.clone(),
         }
     }
 
-    fn safe_tx_builder<T: Transactionable>(&self, tx: T) -> SafeTransactionBuilder<T> {
+    pub fn safe_tx_builder<T: Transactionable>(&self, tx: T) -> SafeTransactionBuilder<T> {
         SafeTransactionBuilder::new(tx, self.chain_id(), self.safe_address.into())
     }
 
