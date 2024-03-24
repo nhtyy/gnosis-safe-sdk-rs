@@ -18,21 +18,23 @@ macro_rules! json_post {
         tracing::debug!(body = serde_json::to_string(&$params).unwrap().as_str());
 
         let resp = $client.post(url.clone()).json(&$params).send().await?;
+        let status = resp.status();
 
         // json deser fails
-        if !resp.status().is_success() {
+        if !status.is_success() {
             tracing::warn!(
                 method = "POST",
                 url = %url,
                 params = serde_json::to_string(&$params).unwrap().as_str(),
                 response = resp.text().await?.as_str(),
+                status = ?status,
                 "Unexpected response from server"
             );
 
             return Err(::anyhow::anyhow!("Unexpected response from server"));
+        } else {
+            Ok(())
         }
-
-        Ok(resp.json::<_>().await?)
     }
 }}
 
