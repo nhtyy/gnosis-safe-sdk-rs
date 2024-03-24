@@ -1,4 +1,4 @@
-use super::types::{ProposeRequest, SafeInfoResponse};
+use super::types::{Paged, ProposeRequest, SafeInfoResponse, SafeTransactionResponse};
 use super::wrappers::ChecksumAddress;
 use crate::encoding::bytes_to_hex_string;
 use crate::safe::SafeTransaction;
@@ -49,8 +49,10 @@ impl SafeClient {
             nonce: AtomicU64::new(0),
         };
 
-        let nonce = this.safe_info().await?.nonce;
+        let nonce = this.next_nonce().await?;
+        tracing::debug!("setting nonce to {}", nonce);
 
+        // Store the next nonce so we can give it out
         this.nonce
             .store(nonce, std::sync::atomic::Ordering::Relaxed);
 
@@ -72,9 +74,8 @@ impl SafeClient {
 }
 
 impl SafeClient {
+    #[tracing::instrument(skip(self), ret)]
     pub async fn safe_info(&self) -> anyhow::Result<SafeInfoResponse> {
-        debug!("getting safe {}", self.safe_address);
-
         json_get!(
             self.client,
             BASE_URL.join(&format!("v1/safes/{}/", self.safe_address))?,
@@ -82,9 +83,8 @@ impl SafeClient {
         )
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn propose(&self, tx: ProposeRequest) -> anyhow::Result<()> {
-        debug!("proposing tx for safe {}", self.safe_address);
-
         json_post!(
             self.client,
             BASE_URL.join(&format!(
@@ -92,6 +92,40 @@ impl SafeClient {
                 self.safe_address
             ))?,
             tx
+        )
+    }
+
+    /// Gets the most recent tx for the safe
+    #[tracing::instrument(skip(self))]
+    pub async fn next_nonce(&self) -> anyhow::Result<u64> {
+        let reported_next = self.safe_info().await?.nonce;
+        let pending = self.pending().await?;
+
+        if !pending.results.is_empty() {
+            return Ok(pending
+                .results
+                .into_iter()
+                .map(|tx| tx.nonce)
+                .max()
+                .expect("to not check an empty array") + 1);
+        }
+
+        Ok(reported_next)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn pending(&self) -> anyhow::Result<Paged<SafeTransactionResponse>> {
+        debug!("getting pending txs for safe {}", self.safe_address);
+
+        let nonce = self.safe_info().await?.nonce;
+
+        json_get!(
+            self.client,
+            BASE_URL.join(&format!(
+                "v1/safes/{}/multisig-transactions/?nonce__gte={nonce}",
+                self.safe_address
+            ))?,
+            Paged<SafeTransactionResponse>
         )
     }
 }

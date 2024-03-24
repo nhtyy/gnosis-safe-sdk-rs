@@ -1,4 +1,4 @@
-use super::wrappers::{ChecksumAddress, Hash};
+use super::wrappers::{ChecksumAddress, DecimalU256, Hash};
 use crate::{safe::SignedSafePayload, transaction::Transactionable};
 use ethers::types::{transaction::eip712::Eip712, Address, Bytes};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -105,4 +105,37 @@ impl<T: Transactionable> TryFrom<SignedSafePayload<T>> for ProposeRequest {
             gas_price: payload.gas_price.as_u128(),
         })
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Paged<T> {
+    pub count: u64,
+    pub next: Option<String>,
+    pub previous: Option<String>,
+    pub results: Vec<T>,
+}
+
+/// A Multisig History Transaction
+#[non_exhaustive]
+#[derive(serde::Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SafeTransactionResponse {
+    /// Address of the safe
+    pub safe: Address,
+    /// Target of the transaction
+    pub to: Address,
+    /// Native asset value included in the transaction
+    pub value: DecimalU256,
+    /// Data payload sent to target by safe
+    #[serde(default)]
+    pub data: Option<Bytes>,
+    /// CALL or DELEGATECALL
+    pub operation: Operation,
+    /// Tx Nonce
+    pub nonce: u64,
+    /// Transaction hash of confirmation (if any)
+    pub transaction_hash: Option<Hash>,
+    /// Safe internal tx hash, produced by EIP712
+    pub safe_tx_hash: Hash,
+    pub signatures: Option<String>, // RSV strings, tightly packed
 }

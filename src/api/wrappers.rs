@@ -174,14 +174,43 @@ pub(crate) mod dec_u256_opt_ser {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct Hash(#[serde(serialize_with = "hex_encode_hash")] [u8; 32]);
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct Hash(#[serde(serialize_with = "hex_encode_hash", deserialize_with="hex_decode_hash")] [u8; 32]);
+
+impl Display for Hash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{}", hex::encode(&self.0))
+    }
+}
+
+impl std::fmt::Debug for Hash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{}", hex::encode(&self.0))
+    }
+}
 
 fn hex_encode_hash<S>(hash: &[u8; 32], s: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     s.serialize_str(&format!("0x{}", hex::encode(hash)))
+}
+
+fn hex_decode_hash<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let s = s.strip_prefix("0x").unwrap_or(&s);
+    let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
+
+    if bytes.len() != 32 {
+        return Err(serde::de::Error::custom("Invalid hash length"));
+    }
+
+    let mut hash = [0; 32];
+    hash.copy_from_slice(&bytes);
+    Ok(hash)
 }
 
 impl std::ops::Deref for Hash {
