@@ -1,11 +1,35 @@
 use super::wrappers::{ChecksumAddress, Hash};
 use crate::{safe::SignedSafePayload, transaction::Transactionable};
 use ethers::types::{transaction::eip712::Eip712, Address, Bytes};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub enum Operation {
     CALL = 0,
     DELEGATE = 1,
+}
+
+impl Serialize for Operation {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u8(*self as u8)
+    }
+}
+
+impl<'de> Deserialize<'de> for Operation {
+    fn deserialize<D>(deserializer: D) -> Result<Operation, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = u8::deserialize(deserializer)?;
+        match value {
+            0 => Ok(Operation::CALL),
+            1 => Ok(Operation::DELEGATE),
+            v @ _ => Err(serde::de::Error::custom(format!("Invalid operation: {}", v))),
+        }
+    }
 }
 
 /// SAFE Info tracked by the API
