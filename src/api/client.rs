@@ -74,7 +74,7 @@ impl SafeClient {
 }
 
 impl SafeClient {
-    #[tracing::instrument(skip(self), ret)]
+    #[tracing::instrument(level = tracing::Level::DEBUG, skip(self), ret)]
     pub async fn safe_info(&self) -> anyhow::Result<SafeInfoResponse> {
         json_get!(
             self.client,
@@ -83,7 +83,7 @@ impl SafeClient {
         )
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = tracing::Level::DEBUG, skip(self))]
     pub async fn propose(&self, tx: ProposeRequest) -> anyhow::Result<()> {
         json_post!(
             self.client,
@@ -96,7 +96,7 @@ impl SafeClient {
     }
 
     /// Gets the most recent tx for the safe
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = tracing::Level::DEBUG, skip(self))]
     pub async fn next_nonce(&self) -> anyhow::Result<u64> {
         let reported_next = self.safe_info().await?.nonce;
         let pending = self.pending().await?;
@@ -113,7 +113,7 @@ impl SafeClient {
         Ok(reported_next)
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(level = tracing::Level::DEBUG, skip(self))]
     pub async fn pending(&self) -> anyhow::Result<Paged<SafeTransactionResponse>> {
         debug!("getting pending txs for safe {}", self.safe_address);
 
